@@ -1,4 +1,4 @@
-FROM php:7.4.3-fpm
+FROM php:7.4.13-fpm
 
 RUN apt-get update && apt-get -y install wget bsdtar libaio1 && \
    wget -qO- https://raw.githubusercontent.com/caffeinalab/php-fpm-oci8/master/oracle/instantclient-basic-linux.x64-12.2.0.1.0.zip | bsdtar -xvf- -C /usr/local && \
@@ -10,6 +10,7 @@ RUN apt-get update && apt-get -y install wget bsdtar libaio1 && \
    ln -s /usr/local/instantclient/sqlplus /usr/bin/sqlplus && \
    docker-php-ext-configure oci8 --with-oci8=instantclient,/usr/local/instantclient && \
    docker-php-ext-install oci8
+
 RUN apt-get update && apt-get install -y \
    build-essential \
    libpng-dev \
@@ -51,6 +52,12 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 RUN rm /etc/nginx/nginx.conf  
 COPY ./conf/nginx.conf /etc/nginx/
 COPY conf/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+RUN snap install core; sudo snap refresh core
+RUN snap install --classic certbot
+RUN ln -s /snap/bin/certbot /usr/bin/certbot
+RUN certbot --nginx
+RUN certbot renew --dry-run
 
 RUN mkdir /app
 WORKDIR /app
