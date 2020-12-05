@@ -1,5 +1,8 @@
 FROM php:7.4.13-fpm
 
+ENV CAROOT=/app/.mkcert \
+   SSL_DOMAIN="comercial.polatosementes.com.br"
+
 RUN apt-get update && apt-get -y install wget bsdtar libaio1 && \
    wget -qO- https://raw.githubusercontent.com/caffeinalab/php-fpm-oci8/master/oracle/instantclient-basic-linux.x64-12.2.0.1.0.zip | bsdtar -xvf- -C /usr/local && \
    wget -qO- https://raw.githubusercontent.com/caffeinalab/php-fpm-oci8/master/oracle/instantclient-sdk-linux.x64-12.2.0.1.0.zip | bsdtar -xvf-  -C /usr/local && \
@@ -29,6 +32,9 @@ RUN apt-get update && apt-get install -y \
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN pecl install -o -f redis \
+   &&  rm -rf /tmp/pear
+
 # Install extensions
 RUN docker-php-ext-install pdo_mysql && \
    docker-php-ext-install mysqli && \
@@ -36,7 +42,8 @@ RUN docker-php-ext-install pdo_mysql && \
    docker-php-ext-install zip && \
    docker-php-ext-install exif && \
    docker-php-ext-install pcntl && \
-   docker-php-ext-install gd
+   docker-php-ext-install gd && \
+   docker-php-ext-enable redis
 
 RUN apt-get update && apt-get -qqy install \
    nginx \
@@ -49,17 +56,19 @@ RUN rm -rf /var/lib/apt/lists/*
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer; \
    chmod +x /usr/local/bin/composer;
 
-RUN rm /etc/nginx/nginx.conf  
+RUN rm /etc/nginx/nginx.conf
+
 COPY ./conf/nginx.conf /etc/nginx/
 COPY conf/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY scripts /scripts
+COPY bin/mkcert /bin/mkcert
 
-RUN snap install core; sudo snap refresh core
-RUN snap install --classic certbot
-RUN ln -s /snap/bin/certbot /usr/bin/certbot
-RUN certbot --nginx
-RUN certbot renew --dry-run
+RUN chmod +x /scripts/entrypoint.sh
+RUN chmod +x /bin/mkcert
 
 RUN mkdir /app
 WORKDIR /app
+
+ENTRYPOINT ["/scripts/entrypoint.sh"]
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
