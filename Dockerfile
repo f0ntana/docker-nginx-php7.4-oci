@@ -1,7 +1,7 @@
 FROM php:7.4.13-fpm
 
 ENV CAROOT=/app/.mkcert \
-   SSL_DOMAIN="comercial.polatosementes.com.br"
+   SSL_DOMAIN="comercial.codeinapp.com.br"
 
 RUN apt-get update && apt-get -y install wget bsdtar libaio1 && \
    wget -qO- https://raw.githubusercontent.com/caffeinalab/php-fpm-oci8/master/oracle/instantclient-basic-linux.x64-12.2.0.1.0.zip | bsdtar -xvf- -C /usr/local && \
@@ -60,15 +60,8 @@ RUN rm /etc/nginx/nginx.conf
 
 COPY ./conf/nginx.conf /etc/nginx/
 COPY conf/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY scripts /scripts
-COPY bin/mkcert /bin/mkcert
-
-RUN chmod +x /scripts/entrypoint.sh
-RUN chmod +x /bin/mkcert
 
 RUN mkdir /app
 WORKDIR /app
-
-ENTRYPOINT ["/scripts/entrypoint.sh"]
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
